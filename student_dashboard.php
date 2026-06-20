@@ -63,7 +63,10 @@ $fee_data = $fees_result->fetch_assoc();
 <div class="dashboard-container">
     <div class="welcome-bar">
         <span>Welcome Student, <strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong></span>
-        <a href="logout.php">Logout</a>
+        <div>
+            <a href="profile.php" style="color: white; text-decoration: none; margin-right: 15px; background: #007BFF; padding: 5px 10px; border-radius: 4px;">My Profile</a>
+            <a href="logout.php">Logout</a>
+        </div>
     </div>
 
     <div class="grid-container">

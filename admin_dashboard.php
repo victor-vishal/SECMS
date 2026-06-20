@@ -94,10 +94,18 @@ $students_result = $conn->query($students_sql);
 <body>
 
 <div class="dashboard-container">
-    <div class="welcome-bar">
+    <!-- <div class="welcome-bar">
         <span>Welcome, <strong>Admin (<?php echo htmlspecialchars($_SESSION['username']); ?>)</strong></span>
         <a href="logout.php">Logout</a>
+    </div> -->
+
+    <div class="welcome-bar">
+    <span>Welcome Student, <strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong></span>
+    <div>
+        <a href="profile.php" style="color: white; text-decoration: none; margin-right: 15px; background: #007BFF; padding: 5px 10px; border-radius: 4px;">My Profile</a>
+        <a href="logout.php">Logout</a>
     </div>
+</div>
 
     <h2>Pending Account Approvals</h2>
     <?php echo $message; ?>
