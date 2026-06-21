@@ -2,168 +2,84 @@
 include 'db_connect.php';
 session_start();
 
-// Security Check: Make sure only logged-in Faculty can access this page
+// Security check: Only faculty allowed
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'faculty') {
     header("Location: login.php");
     exit();
 }
 
-$message = "";
-
-// Fetch Latest Campus Announcements for Faculty View
-$notices_sql = "SELECT title, message, created_by, created_at FROM announcements ORDER BY created_at DESC LIMIT 5";
-$notices_result = $conn->query($notices_sql);
-
-// 1. Handle Attendance Submission
-if (isset($_POST['submit_attendance'])) {
-    $student_id = intval($_POST['student_id']);
-    $subject_name = mysqli_real_escape_string($conn, $_POST['subject_name']);
-    $date = mysqli_real_escape_string($conn, $_POST['date']);
-    $status = $_POST['status'];
-
-    $att_sql = "INSERT INTO attendance (student_id, date, status, subject_name) VALUES ($student_id, '$date', '$status', '$subject_name')";
-    if ($conn->query($att_sql) === TRUE) {
-        $message = "<div class='success'>Attendance recorded successfully!</div>";
-    } else {
-        $message = "<div class='error'>Error: " . $conn->error . "</div>";
-    }
-}
-
-// 2. Handle Marks Submission
-if (isset($_POST['submit_marks'])) {
-    $student_id = intval($_POST['student_id']);
-    $subject_name = mysqli_real_escape_string($conn, $_POST['subject_name']);
-    $semester = intval($_POST['semester']);
-    $marks_obtained = intval($_POST['marks_obtained']);
-    $total_marks = intval($_POST['total_marks']);
-
-    $marks_sql = "INSERT INTO academics (student_id, subject_name, marks_obtained, total_marks, semester) VALUES ($student_id, '$subject_name', $marks_obtained, $total_marks, $semester)";
-    if ($conn->query($marks_sql) === TRUE) {
-        $message = "<div class='success'>Academic marks updated successfully!</div>";
-    } else {
-        $message = "<div class='error'>Error: " . $conn->error . "</div>";
-    }
-}
-
-// Fetch all approved students to display in the dropdown menus
-$students_sql = "SELECT id, username FROM users WHERE role='student' AND status='approved'";
-$students_result = $conn->query($students_sql);
-$students = [];
-if ($students_result->num_rows > 0) {
-    while($row = $students_result->fetch_assoc()) {
-        $students[] = $row;
-    }
-}
+// Fetch some quick dashboard stats for metrics cards
+$total_students = $conn->query("SELECT COUNT(id) as count FROM users WHERE role='student' AND status='approved'")->fetch_assoc()['count'];
+$total_courses = $conn->query("SELECT COUNT(course_code) as count FROM courses")->fetch_assoc()['count'];
+$total_subjects = $conn->query("SELECT COUNT(id) as count FROM subjects")->fetch_assoc()['count'];
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SECMS - Faculty Dashboard</title>
+    <title>Faculty Workspace - Home Overview</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 20px; }
-        .dashboard-container { max-width: 900px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        h2 { color: #333; margin-top: 0; border-bottom: 2px solid #17a2b8; padding-bottom: 10px; }
-        .welcome-bar { display: flex; justify-content: space-between; align-items: center; background: #17a2b8; color: white; padding: 10px 20px; border-radius: 5px; margin-bottom: 20px; }
-        .welcome-bar a { color: white; text-decoration: none; font-weight: bold; background: #dc3545; padding: 5px 10px; border-radius: 4px; }
-        .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
-        .form-card { background: #fdfdfd; padding: 20px; border: 1px solid #e0e0e0; border-radius: 6px; }
-        .form-card h3 { margin-top: 0; color: #17a2b8; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        label { display: block; margin-top: 10px; font-weight: bold; font-size: 14px; }
-        input, select, button { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { background: #17a2b8; color: white; border: none; cursor: pointer; font-size: 15px; font-weight: bold; margin-top: 15px; }
-        button:hover { background: #138496; }
-        .success { color: green; font-weight: bold; margin-bottom: 15px; }
-        .error { color: red; font-weight: bold; margin-bottom: 15px; }
+        :root { --primary: #4f46e5; --bg: #f8fafc; --card: #ffffff; --border: #e2e8f0; --text: #0f172a; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; display: flex; min-height: 100vh; }
+        .sidebar { width: 260px; background: #1e293b; color: white; padding: 25px 20px; box-sizing: border-box; }
+        .sidebar h3 { margin: 0 0 30px 0; color: #38bdf8; }
+        .sidebar a { display: block; color: #cbd5e1; text-decoration: none; padding: 12px 15px; border-radius: 6px; margin-bottom: 8px; }
+        .sidebar a:hover, .sidebar a.active { background: #334155; color: white; }
+        .main-content { flex: 1; padding: 40px; box-sizing: border-box; }
+        
+        .welcome-hero { background: linear-gradient(135deg, #1e293b, #4f46e5); color: white; padding: 30px; border-radius: 12px; margin-bottom: 30px; }
+        .welcome-hero h2 { margin: 0 0 10px 0; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .stat-card h3 { margin: 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card p { margin: 10px 0 0 0; font-size: 28px; font-weight: 700; color: #1e293b; }
+        
+        .card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
     </style>
 </head>
 <body>
 
-<div class="dashboard-container">
-    <div class="welcome-bar">
-        <span>Welcome Student, <strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong></span>
-        <div>
-            <a href="profile.php" style="color: white; text-decoration: none; margin-right: 15px; background: #007BFF; padding: 5px 10px; border-radius: 4px;">My Profile</a>
-            <a href="logout.php">Logout</a>
+<div class="sidebar">
+    <h3>SECMS Faculty</h3>
+    <a href="faculty_dashboard.php" class="active">Overview Dashboard</a>
+    <a href="faculty_marks.php">Manage Grades/Marks</a>
+    <a href="faculty_curriculum.php">Course Curriculum Directory</a>
+    <a href="faculty_attendance.php">Track Daily Attendance</a>
+    <a href="logout.php" style="color: #f87171; margin-top: 40px; display: block;">Sign Out</a>
+</div>
+
+<div class="main-content">
+    <!-- Welcome Header Banner -->
+    <div class="welcome-hero">
+        <h2>Welcome to the Faculty Control Terminal</h2>
+        <p style="margin: 0; opacity: 0.9;">Manage student academic evaluations, roll call attendance logs, and track curriculum frameworks from a single workspace.</p>
+    </div>
+
+    <!-- Quick Analytics Row -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Approved Enrolled Students</h3>
+            <p><?php echo $total_students; ?></p>
+        </div>
+        <div class="stat-card">
+            <h3>Active Course Streams</h3>
+            <p><?php echo $total_courses; ?></p>
+        </div>
+        <div class="stat-card">
+            <h3>Registered Subjects</h3>
+            <p><?php echo $total_subjects; ?></p>
         </div>
     </div>
 
-    <h2>Latest Campus Bulletins</h2>
-    <div style="margin-bottom: 30px;">
-        <?php if ($notices_result && $notices_result->num_rows > 0): ?>
-            <?php while($notice = $notices_result->fetch_assoc()): ?>
-                <div style="background: #fff8e1; border-left: 5px solid #ffb300; padding: 15px; border-radius: 6px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                    <h4 style="margin: 0 0 5px 0; color: #b78103; font-size: 16px;"><?php echo htmlspecialchars($notice['title']); ?></h4>
-                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #4b5563; line-height: 1.5;"><?php echo nl2br(htmlspecialchars($notice['message'])); ?></p>
-                    <small style="color: #9ca3af; font-size: 12px;">Posted by: <strong><?php echo htmlspecialchars($notice['created_by']); ?></strong> on <?php echo date('M d, Y h:i A', strtotime($notice['created_at'])); ?></small>
-                </div>
-            <?php endwhile; ?>
-        <?php else: ?>
-            <div style="background: #f1f5f9; padding: 15px; border-radius: 6px; color: #64748b; text-align: center; font-size: 14px;">No campus announcements posted at this time.</div>
-        <?php endif; ?>
-    </div>
-
-    <h2>Faculty Management Console</h2>
-    <?php echo $message; ?>
-
-    <div class="grid-container">
-        <div class="form-card">
-            <h3>Mark Student Attendance</h3>
-            <form action="faculty_dashboard.php" method="POST">
-                <label for="att_student">Select Student:</label>
-                <select name="student_id" id="att_student" required>
-                    <?php foreach ($students as $student): ?>
-                        <option value="<?php echo $student['id']; ?>"><?php echo htmlspecialchars($student['username']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-
-                <label for="att_subject">Subject Name:</label>
-                <input type="text" name="subject_name" id="att_subject" placeholder="e.g., Software Engineering" required>
-
-                <label for="att_date">Date:</label>
-                <input type="date" name="date" id="att_date" value="<?php echo date('Y-m-d'); ?>" required>
-
-                <label for="att_status">Status:</label>
-                <select name="status" id="att_status" required>
-                    <option value="Present">Present</option>
-                    <option value="Absent">Absent</option>
-                </select>
-
-                <button type="submit" name="submit_attendance">Save Attendance</button>
-            </form>
-        </div>
-
-        <div class="form-card">
-            <h3>Submit Academic Marks</h3>
-            <form action="faculty_dashboard.php" method="POST">
-                <label for="marks_student">Select Student:</label>
-                <select name="student_id" id="marks_student" required>
-                    <?php foreach ($students as $student): ?>
-                        <option value="<?php echo $student['id']; ?>"><?php echo htmlspecialchars($student['username']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-
-                <label for="marks_subject">Subject Name:</label>
-                <input type="text" name="subject_name" id="marks_subject" placeholder="e.g., Software Engineering" required>
-
-                <label for="semester">Semester:</label>
-                <select name="semester" id="semester" required>
-                    <option value="1">Semester 1</option>
-                    <option value="2">Semester 2</option>
-                    <option value="3">Semester 3</option>
-                    <option value="4">Semester 4</option>
-                </select>
-
-                <label for="marks_obtained">Marks Obtained:</label>
-                <input type="number" name="marks_obtained" id="marks_obtained" min="0" max="100" placeholder="e.g., 85" required>
-
-                <label for="total_marks">Total Marks:</label>
-                <input type="number" name="total_marks" id="total_marks" value="100" required>
-
-                <button type="submit" name="submit_marks">Assign Marks</button>
-            </form>
-        </div>
+    <!-- Instructions Card -->
+    <div class="card">
+        <h3 style="margin-top: 0; color: #1e293b;">Quick Launch Workspace Guide</h3>
+        <p style="color: #475569; line-height: 1.6; margin-bottom: 0;">
+            Use the structural navigation options inside the left sidebar panel to manage your daily academic workflows. 
+            You can dynamically input grading data through the <strong>Manage Grades</strong> portal or record attendance ledgers using real-time relational class tracking metrics.
+        </p>
     </div>
 </div>
 

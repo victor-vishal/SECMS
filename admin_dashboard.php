@@ -189,6 +189,7 @@ $active_users_result = $conn->query($active_users_sql);
     <h3>SECMS Admin</h3>
     <a href="admin_dashboard.php" class="active">Dashboard Workspace</a>
     <a href="manage_academic_config.php">Academic Config</a> <a href="profile.php">My Account Profile</a>
+    <a href="admin_assign_student.php">Assign Student Profiles</a>
     <a href="logout.php" class="logout-btn">Sign Out System</a>
 </div>
 
