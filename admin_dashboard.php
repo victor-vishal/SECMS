@@ -10,9 +10,6 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 
 $message = ""; // Initialize message variable ONCE right under security
 
-// Now run your counts and form logic below it safely...
-$count_students = $conn->query("SELECT COUNT(*) as total FROM users WHERE role='student' AND status='approved'")->fetch_assoc()['total'];
-
 // Fetch system analytics counts for the UI metrics cards
 $count_students = $conn->query("SELECT COUNT(*) as total FROM users WHERE role='student' AND status='approved'")->fetch_assoc()['total'];
 $count_faculty = $conn->query("SELECT COUNT(*) as total FROM users WHERE role='faculty' AND status='approved'")->fetch_assoc()['total'];
