@@ -2,27 +2,23 @@
 include 'db_connect.php';
 session_start();
 
-// 1. Security Gate Check (Move this to the absolute top!)
+// Security Gate Check
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     header("Location: login.php");
     exit();
 }
 
-$message = ""; // Initialize message variable ONCE right under security
+$message = "";
+$admin_user = $_SESSION['username'];
 
-// Fetch system analytics counts for the UI metrics cards
-$count_students = $conn->query("SELECT COUNT(*) as total FROM users WHERE role='student' AND status='approved'")->fetch_assoc()['total'];
-$count_faculty = $conn->query("SELECT COUNT(*) as total FROM users WHERE role='faculty' AND status='approved'")->fetch_assoc()['total'];
-$count_pending = $conn->query("SELECT COUNT(*) as total FROM users WHERE status='pending'")->fetch_assoc()['total'];
+// --- 1. HANDLE FORM SUBMISSIONS (Preserved from original) ---
 
 // Handle Notice/Announcement Submission
 if (isset($_POST['submit_notice'])) {
     $title = mysqli_real_escape_string($conn, $_POST['notice_title']);
     $message_text = mysqli_real_escape_string($conn, $_POST['notice_message']);
-    $admin_user = $_SESSION['username'];
-
-    $notice_sql = "INSERT INTO announcements (title, message, created_by) VALUES ('$title', '$message_text', '$admin_user')";
     
+    $notice_sql = "INSERT INTO announcements (title, message, created_by) VALUES ('$title', '$message_text', '$admin_user')";
     if ($conn->query($notice_sql) === TRUE) {
         $message = "<div class='success'>Notice published successfully to all dashboards!</div>";
     } else {
@@ -30,29 +26,21 @@ if (isset($_POST['submit_notice'])) {
     }
 }
 
-// 2. Handle Fee Assignment / Update
+// Handle Fee Assignment / Update
 if (isset($_POST['submit_fee'])) {
     $student_id = intval($_POST['student_id']);
     $total_amount = floatval($_POST['total_amount']);
     $amount_paid = floatval($_POST['amount_paid']);
-
-    if ($amount_paid >= $total_amount) {
-        $fee_status = 'Paid';
-    } elseif ($amount_paid > 0) {
-        $fee_status = 'Partially Paid';
-    } else {
-        $fee_status = 'Pending';
-    }
-
-    $check_fee = "SELECT * FROM fees WHERE student_id = $student_id";
-    $fee_exists = $conn->query($check_fee);
-
-    if ($fee_exists->num_rows > 0) {
-        $fee_sql = "UPDATE fees SET total_amount = $total_amount, amount_paid = $amount_paid, status = '$fee_status' WHERE student_id = $student_id";
+    
+    $fee_status = ($amount_paid >= $total_amount) ? 'Paid' : (($amount_paid > 0) ? 'Partially Paid' : 'Pending');
+    
+    $check_fee = $conn->query("SELECT * FROM fees WHERE student_id = $student_id");
+    if ($check_fee->num_rows > 0) {
+        $fee_sql = "UPDATE fees SET total_amount = $total_amount, amount_paid = $amount_paid, status = '$fee_status', updated_at = NOW() WHERE student_id = $student_id";
     } else {
         $fee_sql = "INSERT INTO fees (student_id, total_amount, amount_paid, status) VALUES ($student_id, $total_amount, $amount_paid, '$fee_status')";
     }
-
+    
     if ($conn->query($fee_sql) === TRUE) {
         $message = "<div class='success'>Fee structure updated successfully!</div>";
     } else {
@@ -66,9 +54,8 @@ if (isset($_POST['submit_timetable'])) {
     $time_slot = mysqli_real_escape_string($conn, $_POST['time_slot']);
     $subject_name = mysqli_real_escape_string($conn, $_POST['subject_name']);
     $room_number = mysqli_real_escape_string($conn, $_POST['room_number']);
-
-    $time_sql = "INSERT INTO timetables (day_of_week, time_slot, subject_name, room_number) VALUES ('$day_of_week', '$time_slot', '$subject_name', '$room_number')";
     
+    $time_sql = "INSERT INTO timetables (day_of_week, time_slot, subject_name, room_number) VALUES ('$day_of_week', '$time_slot', '$subject_name', '$room_number')";
     if ($conn->query($time_sql) === TRUE) {
         $message = "<div class='success'>Timetable slot added successfully!</div>";
     } else {
@@ -76,278 +63,280 @@ if (isset($_POST['submit_timetable'])) {
     }
 }
 
-// 3. Handle Approval / Rejection Actions
+// Handle Approval / Rejection Actions
 if (isset($_GET['action']) && isset($_GET['id'])) {
     $user_id = intval($_GET['id']);
     $action = $_GET['action'];
-
+    
     if ($action === 'approve') {
-        $update_sql = "UPDATE users SET status='approved' WHERE id=$user_id";
-        if ($conn->query($update_sql) === TRUE) {
+        if ($conn->query("UPDATE users SET status='approved' WHERE id=$user_id") === TRUE) {
             $message = "<div class='success'>User account approved successfully!</div>";
         }
-    } elseif ($action === 'reject') {
-        $delete_sql = "DELETE FROM users WHERE id=$user_id";
-        if ($conn->query($delete_sql) === TRUE) {
-            $message = "<div class='error'>User registration request rejected and removed.</div>";
-        }
-    } elseif ($action === 'remove') {
-        // Remove an active approved member
-        $delete_sql = "DELETE FROM users WHERE id=$user_id";
-        if ($conn->query($delete_sql) === TRUE) {
-            $message = "<div class='error'>Member account removed permanently from the system.</div>";
-        } else {
-            $message = "<div class='error'>Error removing member: " . $conn->error . "</div>";
+    } elseif ($action === 'reject' || $action === 'remove') {
+        if ($conn->query("DELETE FROM users WHERE id=$user_id") === TRUE) {
+            $message = "<div class='error'>User account removed from the system.</div>";
         }
     }
 }
 
-// 4. Fetch Queries for Layout
-$pending_sql = "SELECT id, username, email, role FROM users WHERE status='pending'";
-$pending_result = $conn->query($pending_sql);
+// --- 2. FETCH DASHBOARD DATA ---
 
-$students_sql = "SELECT id, username FROM users WHERE role='student' AND status='approved'";
-$students_result = $conn->query($students_sql);
+$count_students = $conn->query("SELECT COUNT(*) as total FROM users WHERE role='student' AND status='approved'")->fetch_assoc()['total'];
+$count_faculty = $conn->query("SELECT COUNT(*) as total FROM users WHERE role='faculty' AND status='approved'")->fetch_assoc()['total'];
+$count_pending = $conn->query("SELECT COUNT(*) as total FROM users WHERE status='pending'")->fetch_assoc()['total'];
+$count_courses = $conn->query("SELECT COUNT(*) as total FROM courses")->fetch_assoc()['total'];
 
-// Fetch all active approved members (both students and faculty)
-$active_users_sql = "SELECT id, username, email, role FROM users WHERE status='approved' ORDER BY role, username ASC";
-$active_users_result = $conn->query($active_users_sql);
+// Fetch Pending Users
+$pending_result = $conn->query("SELECT id, username, email, role FROM users WHERE status='pending' ORDER BY created_at ASC");
 
+// Fetch active students for the fee dropdown
+$students_result = $conn->query("SELECT id, username FROM users WHERE role='student' AND status='approved' ORDER BY username ASC");
+
+// Fetch System Financials
+$finance_data = $conn->query("SELECT SUM(total_amount) as expected, SUM(amount_paid) as collected FROM fees")->fetch_assoc();
+$total_expected = $finance_data['expected'] ?? 0;
+$total_collected = $finance_data['collected'] ?? 0;
+$total_due = $total_expected - $total_collected;
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SECMS - Admin Dashboard</title>
-    
+    <title>Admin Dashboard - SECMS</title>
     <style>
-    :root {
-        --primary: #4f46e5;
-        --success: #10b981;
-        --danger: #ef4444;
-        --bg: #f8fafc;
-        --card-bg: #ffffff;
-        --text: #0f172a;
-        --border: #e2e8f0;
-    }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; display: flex; min-height: 100vh; }
-    
-    /* Layout Structure */
-    .sidebar { width: 260px; background: #1e293b; color: white; padding: 25px 20px; box-sizing: border-box; }
-    .sidebar h3 { margin: 0 0 30px 0; font-size: 20px; letter-spacing: 0.5px; color: #38bdf8; }
-    .sidebar a { display: block; color: #cbd5e1; text-decoration: none; padding: 12px 15px; border-radius: 6px; margin-bottom: 8px; font-weight: 500; transition: all 0.2s; }
-    .sidebar a:hover, .sidebar a.active { background: #334155; color: white; }
-    .sidebar a.logout-btn { background: #rgba(239, 68, 68, 0.1); color: #f87171; margin-top: 40px; }
-    .sidebar a.logout-btn:hover { background: var(--danger); color: white; }
-    
-    .main-content { flex: 1; padding: 40px; box-sizing: border-box; overflow-y: auto; }
-    .welcome-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; }
-    .welcome-header h1 { margin: 0; font-size: 28px; font-weight: 700; color: var(--text); }
-    
-    /* Grid Analytics Cards */
-    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 35px; }
-    .stat-card { background: var(--card-bg); padding: 24px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
-    .stat-card .label { font-size: 14px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-    .stat-card .value { font-size: 32px; font-weight: 700; margin: 10px 0 0 0; color: #1e293b; }
-    
-    /* Content Panels */
-    .panel { background: var(--card-bg); padding: 30px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.02); margin-bottom: 35px; }
-    .panel h2 { margin-top: 0; font-size: 20px; font-weight: 600; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-    
-    /* Tables and Forms */
-    table { width: 100%; border-collapse: collapse; text-align: left; }
-    th { padding: 14px 16px; background: #f1f5f9; font-weight: 600; color: #475569; font-size: 14px; }
-    td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 15px; }
-    .btn { padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600; display: inline-block; transition: background 0.2s; }
-    .btn-approve { background: #d1fae5; color: #065f46; margin-right: 8px; }
-    .btn-approve:hover { background: #bbf7d0; }
-    .btn-reject { background: #fee2e2; color: #991b1b; }
-    .btn-reject:hover { background: #fecaca; }
-    
-    input, select, button { width: 100%; padding: 10px 14px; margin-top: 8px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 15px; }
-    button { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 10px; }
-    button:hover { background: #4338ca; }
-    .success { background: #d1fae5; color: #065f46; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-weight: 500; }
-    .error { background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-weight: 500; }
-</style>
-
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #3730a3;
+            --accent: #6366f1;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --text-light: #64748b;
+        }
+        
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; min-height: 100vh; }
+        
+        /* Sidebar */
+        .sidebar { width: 260px; background: #1e293b; color: white; padding: 25px 20px; box-sizing: border-box; flex-shrink: 0; }
+        .sidebar h3 { margin: 0 0 30px 0; color: #38bdf8; font-size: 20px; }
+        .sidebar a { display: block; color: #cbd5e1; text-decoration: none; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; font-weight: 500; transition: all 0.2s; }
+        .sidebar a:hover, .sidebar a.active { background: #334155; color: white; }
+        
+        /* Main Workspace */
+        .workspace { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .top-header { background: var(--card); height: 70px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; padding: 0 40px; box-sizing: border-box; }
+        
+        .main-content { padding: 30px 40px; box-sizing: border-box; overflow-y: auto; }
+        h1 { margin: 0 0 5px 0; font-size: 28px; }
+        .subtitle { color: var(--text-light); margin-bottom: 30px; font-size: 15px; }
+        
+        /* CSS Grid Layouts */
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; margin-bottom: 25px; }
+        
+        /* Cards */
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .card-header { margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; font-size: 18px; font-weight: 700; color: var(--text); }
+        
+        /* Metric Stats */
+        .stat-card { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 12px; }
+        .stat-card p { margin: 0; font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--text-light); }
+        .stat-card h3 { margin: 8px 0 0 0; font-size: 28px; font-weight: 700; color: var(--text); }
+        
+        /* Tables & Forms */
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid var(--border); text-align: left; font-size: 14px; }
+        th { color: var(--text-light); font-weight: 600; background: #f8fafc; }
+        
+        label { font-size: 13px; font-weight: 600; color: var(--text-light); display: block; margin-top: 12px; margin-bottom: 4px; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 14px; font-family: inherit; }
+        button { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; padding: 12px; border-radius: 6px; width: 100%; margin-top: 15px; transition: 0.2s; }
+        button:hover { background: var(--primary-dark); }
+        
+        /* Buttons / Badges */
+        .btn-sm { padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: 600; display: inline-block; }
+        .btn-approve { background: #d1fae5; color: #065f46; }
+        .btn-reject { background: #fee2e2; color: #991b1b; }
+        
+        .role-badge { padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; background: #f1f5f9; text-transform: uppercase; }
+        
+        /* Alerts */
+        .success { background: #d1fae5; color: #065f46; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; border: 1px solid #34d399; }
+        .error { background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; border: 1px solid #f87171; }
+        
+        .col-span-2 { grid-column: span 2; }
+    </style>
 </head>
 <body>
 
-<!-- <div class="sidebar">
-    <h3>SECMS Admin</h3>
-    <a href="admin_dashboard.php" class="active">Dashboard Workspace</a>
-    <a href="profile.php">My Account Profile</a>
-    <a href="logout.php" class="logout-btn">Sign Out System</a>
-</div> -->
-
 <div class="sidebar">
     <h3>SECMS Admin</h3>
-    <a href="admin_dashboard.php" class="active">Dashboard Workspace</a>
-    <a href="manage_academic_config.php">Academic Config</a> <a href="profile.php">My Account Profile</a>
+    <a href="admin_dashboard.php" class="active">Command Center</a>
+    <a href="manage_academic_config.php">Academic Config</a>
     <a href="admin_assign_student.php">Assign Student Profiles</a>
-    <a href="logout.php" class="logout-btn">Sign Out System</a>
+    <a href="profile.php">My Account Profile</a>
+    <a href="logout.php" style="color: #f87171; margin-top: 40px; display: block;">Sign Out System</a>
 </div>
 
-<div class="main-content">
-    <div class="welcome-header">
+<div class="workspace">
+    <header class="top-header">
+        <div style="font-size: 15px; font-weight: 500; color: #64748b;">System Role: <strong>Administrator</strong></div>
+        <div style="font-weight: 600; display: flex; align-items: center; gap: 10px;">
+            <div style="width: 30px; height: 30px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <?php echo strtoupper(substr($admin_user, 0, 1)); ?>
+            </div>
+            <?php echo htmlspecialchars($admin_user); ?>
+        </div>
+    </header>
+
+    <main class="main-content">
         <h1>Overview Dashboard Workspace</h1>
-        <span style="color: #64748b; font-weight: 500;">Logged in: <strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong></span>
-    </div>
+        <div class="subtitle">Manage registrations, system financials, and campus broadcasts.</div>
 
-    <?php if (!empty($message)) echo $message; ?>
+        <?php if (!empty($message)) echo $message; ?>
 
-    <div class="stats-grid">
-        <div class="stat-card" style="border-top: 4px solid var(--primary);">
-            <span class="label">Approved Students Set</span>
-            <span class="value"><?php echo $count_students; ?></span>
+        <div class="stats-row">
+            <div class="stat-card" style="border-top: 4px solid var(--accent);">
+                <p>Approved Students</p>
+                <h3><?php echo $count_students; ?></h3>
+            </div>
+            <div class="stat-card" style="border-top: 4px solid var(--success);">
+                <p>Faculty Staff</p>
+                <h3><?php echo $count_faculty; ?></h3>
+            </div>
+            <div class="stat-card" style="border-top: 4px solid var(--danger);">
+                <p>Pending Approvals</p>
+                <h3><?php echo $count_pending; ?></h3>
+            </div>
+            <div class="stat-card" style="border-top: 4px solid var(--warning);">
+                <p>Active Courses</p>
+                <h3><?php echo $count_courses; ?></h3>
+            </div>
         </div>
-        <div class="stat-card" style="border-top: 4px solid var(--success);">
-            <span class="label">Approved Faculty Staff</span>
-            <span class="value"><?php echo $count_faculty; ?></span>
-        </div>
-        <div class="stat-card" style="border-top: 4px solid var(--danger);">
-            <span class="label">Pending Requests Queue</span>
-            <span class="value"><?php echo $count_pending; ?></span>
-        </div>
-    </div>
 
-    <div class="panel">
-        <h2>System Registration Requests Gate</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Username Identifier</th>
-                    <th>Email Address Contacts</th>
-                    <th>Requested System Role</th>
-                    <th>Action Controller Operations</th>
-                </tr>
-            </thead>
-            <tbody>
+        <div class="dashboard-grid">
+            
+            <div class="card col-span-2">
+                <div class="card-header">🛡️ Registration Requests Gate</div>
                 <?php if ($pending_result && $pending_result->num_rows > 0): ?>
-                    <?php while($row = $pending_result->fetch_assoc()): ?>
-                        <tr>
-                            <td><strong><?php echo htmlspecialchars($row['username']); ?></strong></td>
-                            <td><?php echo htmlspecialchars($row['email']); ?></td>
-                            <td><span style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-weight:600; font-size:13px;"><?php echo ucfirst($row['role']); ?></span></td>
-                            <td>
-                                <a href="admin_dashboard.php?action=approve&id=<?php echo $row['id']; ?>" class="btn btn-approve">Grant Access</a>
-                                <a href="admin_dashboard.php?action=reject&id=<?php echo $row['id']; ?>" class="btn btn-reject" onclick="return confirm('Drop registration file entry permanently?')">Drop Entry</a>
-                            </td>
-                        </tr>
-                    <?php endwhile; ?>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Email Address</th>
+                                <th>Requested Role</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while($row = $pending_result->fetch_assoc()): ?>
+                            <tr>
+                                <td><strong><?php echo htmlspecialchars($row['username']); ?></strong></td>
+                                <td><?php echo htmlspecialchars($row['email']); ?></td>
+                                <td><span class="role-badge"><?php echo htmlspecialchars($row['role']); ?></span></td>
+                                <td style="text-align: right;">
+                                    <a href="admin_dashboard.php?action=approve&id=<?php echo $row['id']; ?>" class="btn-sm btn-approve">Approve</a>
+                                    <a href="admin_dashboard.php?action=reject&id=<?php echo $row['id']; ?>" class="btn-sm btn-reject" onclick="return confirm('Drop registration request?')">Reject</a>
+                                </td>
+                            </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
                 <?php else: ?>
-                    <tr>
-                        <td colspan="4" style="text-align: center; color: #94a3b8; padding: 30px;">Registration queue empty. No actions pending.</td>
-                    </tr>
+                    <div style="text-align: center; padding: 30px 0; color: var(--text-light);">
+                        <div style="font-size: 32px; margin-bottom: 10px;">✅</div>
+                        Registration queue is empty. No actions pending.
+                    </div>
                 <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
+            </div>
 
-    <div class="panel">
-        <h2>Manage Active Campus Members</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Username</th>
-                    <th>Email Contact</th>
-                    <th>System Role</th>
-                    <th>Action Operations</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if ($active_users_result && $active_users_result->num_rows > 0): ?>
-                    <?php while($member = $active_users_result->fetch_assoc()): ?>
-                        <?php if ($member['id'] == $_SESSION['user_id']) continue; ?>
-                        <tr>
-                            <td><strong><?php echo htmlspecialchars($member['username']); ?></strong></td>
-                            <td><?php echo htmlspecialchars($member['email']); ?></td>
-                            <td>
-                                <span style="background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-weight:600; font-size:13px;">
-                                    <?php echo ucfirst($member['role']); ?>
-                                </span>
-                            </td>
-                            <td>
-                                <a href="admin_dashboard.php?action=remove&id=<?php echo $member['id']; ?>" class="btn btn-reject" onclick="return confirm('Are you completely sure you want to permanently revoke access and delete this member?')">Remove Member</a>
-                            </td>
-                        </tr>
-                    <?php endwhile; ?>
-                <?php else: ?>
-                    <tr>
-                        <td colspan="4" style="text-align: center; color: #94a3b8; padding: 30px;">No active members found in the directory.</td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
+            <div class="card">
+                <div class="card-header">💰 System Financial Ledger</div>
+                <div style="margin-bottom: 15px;">
+                    <span style="font-size: 13px; color: var(--text-light); text-transform: uppercase; font-weight: 600;">Total Expected Revenue</span>
+                    <div style="font-size: 24px; font-weight: 700; color: var(--text);">₹<?php echo number_format($total_expected, 2); ?></div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <span style="font-size: 13px; color: var(--text-light); text-transform: uppercase; font-weight: 600;">Total Collected</span>
+                    <div style="font-size: 24px; font-weight: 700; color: var(--success);">₹<?php echo number_format($total_collected, 2); ?></div>
+                </div>
+                <div style="padding-top: 15px; border-top: 1px solid var(--border);">
+                    <span style="font-size: 13px; color: var(--text-light); text-transform: uppercase; font-weight: 600;">Pending Dues</span>
+                    <div style="font-size: 20px; font-weight: 700; color: var(--danger);">₹<?php echo number_format($total_due, 2); ?></div>
+                </div>
+            </div>
 
-    <div class="panel" style="max-width: 600px;">
-        <h2>Financial Accounts & Fees Ledger Config</h2>
-        <form action="admin_dashboard.php" method="POST">
-            <label for="fee_student">Select Target Student Profile:</label>
-            <select name="student_id" id="fee_student" required>
-                <?php if ($students_result && $students_result->num_rows > 0): ?>
-                    <?php 
-                    $students_result->data_seek(0);
-                    while($st = $students_result->fetch_assoc()): 
-                    ?>
-                        <option value="<?php echo $st['id']; ?>"><?php echo htmlspecialchars($st['username']); ?></option>
-                    <?php endwhile; ?>
-                <?php else: ?>
-                    <option value="">No authorized student directories loaded</option>
-                <?php endif; ?>
-            </select>
+            <div class="card">
+                <div class="card-header">📢 Publish Campus Notice</div>
+                <form action="admin_dashboard.php" method="POST">
+                    <label>Notice Heading/Title:</label>
+                    <input type="text" name="notice_title" placeholder="e.g., End Semester Exams" required>
+                    
+                    <label>Detailed Message Content:</label>
+                    <textarea name="notice_message" rows="3" placeholder="Type the complete notice details here..." required></textarea>
+                    
+                    <button type="submit" name="submit_notice">Broadcast Notice</button>
+                </form>
+            </div>
 
-            <label for="total_amount">Assigned Term Fee Bill Total (₹):</label>
-            <input type="number" step="0.01" name="total_amount" id="total_amount" placeholder="e.g. 65000" required>
+            <div class="card">
+                <div class="card-header">💳 Assign / Update Fees</div>
+                <form action="admin_dashboard.php" method="POST">
+                    <label>Select Target Student:</label>
+                    <select name="student_id" required>
+                        <option value="">-- Select Approved Student --</option>
+                        <?php 
+                        if ($students_result && $students_result->num_rows > 0) {
+                            $students_result->data_seek(0);
+                            while($st = $students_result->fetch_assoc()) {
+                                echo "<option value='".$st['id']."'>".htmlspecialchars($st['username'])."</option>";
+                            }
+                        }
+                        ?>
+                    </select>
+                    
+                    <label>Total Term Fee (₹):</label>
+                    <input type="number" step="0.01" name="total_amount" placeholder="e.g. 65000" required>
+                    
+                    <label>Amount Cleared (₹):</label>
+                    <input type="number" step="0.01" name="amount_paid" value="0" required>
+                    
+                    <button type="submit" name="submit_fee" style="background: var(--success);">Commit Transaction</button>
+                </form>
+            </div>
 
-            <label for="amount_paid">Amount Cleared to Date Balance (₹):</label>
-            <input type="number" step="0.01" name="amount_paid" id="amount_paid" placeholder="e.g. 30000" value="0" required>
+            <div class="card">
+                <div class="card-header">🕒 Publish Class Schedule</div>
+                <form action="admin_dashboard.php" method="POST">
+                    <label>Select Day:</label>
+                    <select name="day_of_week" required>
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                    </select>
+                    
+                    <label>Time Slot Window:</label>
+                    <input type="text" name="time_slot" placeholder="e.g., 10:00 AM - 11:30 AM" required>
+                    
+                    <label>Subject Assignment:</label>
+                    <input type="text" name="subject_name" placeholder="e.g., Data Science Basics" required>
+                    
+                    <label>Classroom Location:</label>
+                    <input type="text" name="room_number" placeholder="e.g., Lab Block B-302" required>
+                    
+                    <button type="submit" name="submit_timetable" style="background: var(--warning); color: #92400e;">Publish Schedule</button>
+                </form>
+            </div>
 
-            <button type="submit" name="submit_fee">Commit Transaction Changes</button>
-        </form>
-    </div>
-
-    <div class="panel" style="max-width: 600px;">
-        <h2>Publish Campus Announcement</h2>
-        <form action="admin_dashboard.php" method="POST">
-            <label for="notice_title">Notice Heading/Title:</label>
-            <input type="text" name="notice_title" id="notice_title" placeholder="e.g., End Semester Examination Schedule" required>
-
-            <label for="notice_message">Detailed Message Content:</label>
-            <textarea name="notice_message" id="notice_message" rows="4" style="width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-family: inherit; font-size: 15px;" placeholder="Type the complete notice details here..." required></textarea>
-
-            <button type="submit" name="submit_notice">Broadcast Notice Bulletin</button>
-        </form>
-    </div>
-
-    <div class="panel" style="max-width: 600px;">
-        <h2>Class Timetable Schedule Config</h2>
-        <form action="admin_dashboard.php" method="POST">
-            <label for="day_of_week">Select Day:</label>
-            <select name="day_of_week" id="day_of_week" required>
-                <option value="Monday">Monday</option>
-                <option value="Tuesday">Tuesday</option>
-                <option value="Wednesday">Wednesday</option>
-                <option value="Thursday">Thursday</option>
-                <option value="Friday">Friday</option>
-            </select>
-
-            <label for="time_slot">Time Slot Window:</label>
-            <input type="text" name="time_slot" id="time_slot" placeholder="e.g., 10:00 AM - 11:30 AM" required>
-
-            <label for="subject_name">Subject Assignment:</label>
-            <input type="text" name="subject_name" id="subject_name" placeholder="e.g., Data Science Basics" required>
-
-            <label for="room_number">Classroom / Lab Location:</label>
-            <input type="text" name="room_number" id="room_number" placeholder="e.g., Lab Block B-302" required>
-
-            <button type="submit" name="submit_timetable">Publish Schedule Slot</button>
-        </form>
-    </div>
-
+        </div>
+    </main>
 </div>
 
 </body>

@@ -112,17 +112,29 @@ $grading_activity = $conn->query("
     <a href="faculty_marks.php">Manage Grades/Marks</a>
     <a href="faculty_curriculum.php">Course Curriculum Directory</a>
     <a href="faculty_attendance.php">Track Daily Attendance</a>
+    <a href="faculty_profile.php">Profile Sheet</a>
+    <a href="profile.php">Account Settings</a>
     <a href="logout.php" style="color: #f87171; margin-top: 40px; display: block;">Sign Out</a>
 </div>
 
 <div class="workspace">
+
     <header class="top-header">
         <div style="font-size: 15px; font-weight: 500; color: #64748b;">Workspace Context: <strong>Faculty Terminal</strong></div>
-        <div style="font-weight: 600; display: flex; align-items: center; gap: 10px;">
-            <div style="width: 30px; height: 30px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <?php echo strtoupper(substr($faculty_name, 0, 1)); ?>
+        
+        <div class="profile-menu" style="position: relative; display: inline-block;">
+            <div class="profile-trigger" style="display: flex; align-items: center; gap: 10px; background: #f1f5f9; padding: 8px 16px; border-radius: 50px; cursor: pointer; font-weight: 600; font-size: 14px; border: 1px solid var(--border);" onclick="var d = document.getElementById('fac-drop'); d.style.display = d.style.display === 'block' ? 'none' : 'block';">
+                <div style="width: 28px; height: 28px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px;">
+                    <?php echo strtoupper(substr($faculty_name, 0, 1)); ?>
+                </div>
+                <?php echo htmlspecialchars($faculty_name); ?> ▾
             </div>
-            <?php echo htmlspecialchars($faculty_name); ?>
+            
+            <div id="fac-drop" style="display: none; position: absolute; right: 0; top: 48px; background: white; min-width: 180px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 8px; border: 1px solid var(--border); z-index: 50; overflow: hidden;">
+                <a href="faculty_profile.php" style="color: var(--text); padding: 12px 16px; text-decoration: none; display: block; font-size: 14px; border-bottom: 1px solid #f1f5f9;">👤 Profile Sheet</a>
+                <a href="profile.php" style="color: var(--text); padding: 12px 16px; text-decoration: none; display: block; font-size: 14px;">⚙️ Account Settings</a>
+                <a href="logout.php" style="color: #ef4444; padding: 12px 16px; text-decoration: none; display: block; font-size: 14px; border-top: 1px solid #f1f5f9;">🚪 Sign Out</a>
+            </div>
         </div>
     </header>
 
