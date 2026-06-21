@@ -63,10 +63,11 @@ $timetable_query = $conn->query("SELECT * FROM timetables WHERE day_of_week = '$
         .sidebar h3 { margin: 0 0 30px 0; color: #60a5fa; font-size: 20px; }
         .sidebar a { display: block; color: #94a3b8; text-decoration: none; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; font-weight: 500; transition: all 0.2s; }
         .sidebar a:hover, .sidebar a.active { background: #1e293b; color: white; }
+        .sidebar a.active { background: var(--accent); }
         
         /* Main Workspace */
         .workspace { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-        .top-header { background: var(--card); height: 70px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; padding: 0 40px; box-sizing: border-box; }
+        .top-header { background: var(--card); height: 70px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; padding: 0 40px; box-sizing: border-box; z-index: 10; }
         
         .main-content { padding: 40px; box-sizing: border-box; overflow-y: auto; }
         h1 { margin: 0 0 5px 0; font-size: 28px; }
@@ -111,17 +112,28 @@ $timetable_query = $conn->query("SELECT * FROM timetables WHERE day_of_week = '$
     <a href="student_profile.php">My Profile Sheet</a>
     <a href="student_classmates.php">Classmates Directory</a>
     <a href="student_curriculum.php">Curriculum Roadmap</a>
+    <a href="profile.php">Account Settings</a>
     <a href="logout.php" style="color: #f87171; margin-top: 40px; display: block;">Sign Out</a>
 </div>
 
 <div class="workspace">
     <header class="top-header">
-        <div style="font-size: 15px; font-weight: 500; color: #64748b;">Academic Session: <strong>Semester <?php echo htmlspecialchars($semester); ?></strong></div>
-        <div style="font-weight: 600; display: flex; align-items: center; gap: 10px;">
-            <div style="width: 30px; height: 30px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <?php echo strtoupper(substr($student_name, 0, 1)); ?>
+        <div style="font-size: 15px; font-weight: 500; color: var(--text-light);">Academic Session: <strong>Semester <?php echo htmlspecialchars($semester); ?></strong></div>
+        
+        <!-- Interactive Profile Menu -->
+        <div class="profile-menu" style="position: relative; display: inline-block;">
+            <div class="profile-trigger" style="display: flex; align-items: center; gap: 10px; background: #f1f5f9; padding: 8px 16px; border-radius: 50px; cursor: pointer; font-weight: 600; font-size: 14px; border: 1px solid var(--border);" onclick="var d = document.getElementById('stu-drop'); d.style.display = d.style.display === 'block' ? 'none' : 'block';">
+                <div style="width: 28px; height: 28px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px;">
+                    <?php echo strtoupper(substr($student_name, 0, 1)); ?>
+                </div>
+                <?php echo htmlspecialchars($student_name); ?> ▾
             </div>
-            <?php echo htmlspecialchars($student_name); ?>
+            
+            <div id="stu-drop" style="display: none; position: absolute; right: 0; top: 48px; background: white; min-width: 180px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 8px; border: 1px solid var(--border); z-index: 50; overflow: hidden;">
+                <a href="student_profile.php" style="color: var(--text); padding: 12px 16px; text-decoration: none; display: block; font-size: 14px; border-bottom: 1px solid #f1f5f9;">👤 Profile Sheet</a>
+                <a href="profile.php" style="color: var(--text); padding: 12px 16px; text-decoration: none; display: block; font-size: 14px;">⚙️ Account Settings</a>
+                <a href="logout.php" style="color: #ef4444; padding: 12px 16px; text-decoration: none; display: block; font-size: 14px; border-top: 1px solid #f1f5f9;">🚪 Sign Out</a>
+            </div>
         </div>
     </header>
 
@@ -131,6 +143,7 @@ $timetable_query = $conn->query("SELECT * FROM timetables WHERE day_of_week = '$
 
         <div class="dashboard-grid">
             
+            <!-- Campus Announcements -->
             <div class="card col-span-2">
                 <div class="card-header">
                     <h2>📢 Latest Announcements</h2>
@@ -148,6 +161,7 @@ $timetable_query = $conn->query("SELECT * FROM timetables WHERE day_of_week = '$
                 <?php endif; ?>
             </div>
 
+            <!-- Attendance Overview -->
             <div class="card" style="border-top: 4px solid var(--accent);">
                 <div class="card-header">
                     <h2>📅 Attendance</h2>
@@ -161,6 +175,7 @@ $timetable_query = $conn->query("SELECT * FROM timetables WHERE day_of_week = '$
                 <?php endif; ?>
             </div>
 
+            <!-- Recent Academic Marks -->
             <div class="card col-span-2">
                 <div class="card-header">
                     <h2>📊 Recent Examination Grades</h2>
@@ -201,8 +216,10 @@ $timetable_query = $conn->query("SELECT * FROM timetables WHERE day_of_week = '$
                 <?php endif; ?>
             </div>
 
+            <!-- Fee Status & Timetable Stack -->
             <div style="display: flex; flex-direction: column; gap: 25px;">
                 
+                <!-- Fees -->
                 <div class="card" style="border-top: 4px solid var(--success);">
                     <div class="card-header">
                         <h2>💳 Financial Ledger</h2>
@@ -226,6 +243,7 @@ $timetable_query = $conn->query("SELECT * FROM timetables WHERE day_of_week = '$
                     <?php endif; ?>
                 </div>
 
+                <!-- Today's Timetable -->
                 <div class="card">
                     <div class="card-header">
                         <h2>🕒 Today's Schedule (<?php echo $current_day; ?>)</h2>
