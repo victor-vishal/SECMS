@@ -51,43 +51,6 @@ if (isset($_POST['add_subject'])) {
     }
 }
 
-// 4. Handle Depletions / Deletions
-if (isset($_GET['action']) && isset($_GET['id'])) {
-    $action = $_GET['action'];
-    
-    if ($action === 'delete_course') {
-        $course_code = mysqli_real_escape_string($conn, $_GET['id']);
-        // Due to ON DELETE CASCADE, deleting a course automatically drops its mapped subjects!
-        $sql = "DELETE FROM courses WHERE course_code = '$course_code'";
-        if ($conn->query($sql) === TRUE) {
-            $message = "<div class='error'>Course '$course_code' and all its associated subjects purged successfully!</div>";
-        }
-    } 
-    elseif ($action === 'delete_batch') {
-        $batch_id = intval($_GET['id']);
-        $sql = "DELETE FROM batches WHERE id = $batch_id";
-        if ($conn->query($sql) === TRUE) {
-            $message = "<div class='error'>Academic batch destroyed successfully!</div>";
-        }
-    }
-    elseif ($action === 'delete_subject') {
-        $sub_id = intval($_GET['id']);
-        $sql = "DELETE FROM subjects WHERE id = $sub_id";
-        if ($conn->query($sql) === TRUE) {
-            $message = "<div class='error'>Subject curriculum entry dropped cleanly.</div>";
-        }
-    }
-}
-
-// 5. Handle Semester Promotions / Updates for Batches
-if (isset($_GET['action']) && $_GET['action'] === 'promote_batch') {
-    $batch_id = intval($_GET['id']);
-    $sql = "UPDATE batches SET current_semester = current_semester + 1 WHERE id = $batch_id AND current_semester < 8";
-    if ($conn->query($sql) === TRUE) {
-        $message = "<div class='success'>Batch academic level promoted to the next semester phase!</div>";
-    }
-}
-
 // Fetch active structures for populating selectors & summary grids
 $courses_res = $conn->query("SELECT * FROM courses ORDER BY course_code ASC");
 $batches_res = $conn->query("SELECT * FROM batches ORDER BY batch_name DESC");
@@ -208,87 +171,15 @@ $subjects_res = $conn->query("SELECT s.*, c.course_name FROM subjects s JOIN cou
         </form>
     </div>
 
-    <div class="panel-grid">
-        <div class="panel">
-            <h2>Registered Degrees & Streams</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <td><code><?php echo htmlspecialchars($c['course_code']); ?></code></td>
-                        <td><strong><?php echo htmlspecialchars($c['course_name']); ?></strong></td>
-                        <td style="text-align: right;">
-                            <a href="manage_academic_config.php?action=delete_course&id=<?php echo urlencode($c['course_code']); ?>" style="color: var(--danger); text-decoration: none; font-weight: 600;" onclick="return confirm('Deleting this course will instantly clear out all its mapped subjects! Proceed?')">Delete</a>
-                        </td>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    if ($courses_res && $courses_res->num_rows > 0):
-                        $courses_res->data_seek(0); // Reset pointer to loop again
-                        while($c = $courses_res->fetch_assoc()): 
-                    ?>
-                        <tr>
-                            <td><code><?php echo htmlspecialchars($c['course_code']); ?></code></td>
-                            <td><strong><?php echo htmlspecialchars($c['course_name']); ?></strong></td>
-                        </tr>
-                    <?php 
-                        endwhile;
-                    else: 
-                    ?>
-                        <tr><td colspan="2" style="text-align:center; color:#94a3b8;">No courses found.</td></tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="panel">
-            <h2>Active Academic Batches</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <td><strong><?php echo htmlspecialchars($b['batch_name']); ?></strong></td>
-                        <td><span style="background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius:4px; font-weight:600; font-size:12px;">Semester <?php echo $b['current_semester']; ?></span></td>
-                        <td style="text-align: right;">
-                            <?php if($b['current_semester'] < 8): ?>
-                                <a href="manage_academic_config.php?action=promote_batch&id=<?php echo $b['id']; ?>" style="color: var(--primary); text-decoration: none; font-weight: 600; margin-right: 12px;">Promote Sem</a>
-                            <?php endif; ?>
-                            <a href="manage_academic_config.php?action=delete_batch&id=<?php echo $b['id']; ?>" style="color: var(--danger); text-decoration: none; font-weight: 600;" onclick="return confirm('Completely clear this batch configuration frame?')">Delete</a>
-                        </td>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    if ($batches_res && $batches_res->num_rows > 0):
-                        $batches_res->data_seek(0); // Reset pointer to loop again
-                        while($b = $batches_res->fetch_assoc()): 
-                    ?>
-                        <tr>
-                            <td><strong><?php echo htmlspecialchars($b['batch_name']); ?></strong></td>
-                            <td><span style="background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius:4px; font-weight:600; font-size:12px;">Semester <?php echo $b['current_semester']; ?></span></td>
-                        </tr>
-                    <?php 
-                        endwhile;
-                    else: 
-                    ?>
-                        <tr><td colspan="2" style="text-align:center; color:#94a3b8;">No batches initialized.</td></tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
     <div class="panel">
         <h2>Master Subjects Curriculum Map Index</h2>
         <table>
             <thead>
                 <tr>
-                    <td><code><?php echo htmlspecialchars($sub['subject_code']); ?></code></td>
-                    <td><strong><?php echo htmlspecialchars($sub['subject_name']); ?></strong></td>
-                    <td><?php echo htmlspecialchars($sub['course_name']); ?></td>
-                    <td><span style="background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius:4px; font-weight:600; font-size:12px;">Sem <?php echo $sub['semester']; ?></span></td>
-                    <td style="text-align: right;">
-                        <a href="manage_academic_config.php?action=delete_subject&id=<?php echo $sub['id']; ?>" style="color: var(--danger); text-decoration: none; font-weight: 600;" onclick="return confirm('Drop this subject entry from curriculum map?')">Delete</a>
-                    </td>
+                    <th>Subject Code</th>
+                    <th>Subject Name</th>
+                    <th>Assigned Course Stream</th>
+                    <th>Term Phase</th>
                 </tr>
             </thead>
             <tbody>
