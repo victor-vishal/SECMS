@@ -76,7 +76,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
     }
 }
 
-// 5. Handle Semester Promotions / Updates for Batches
+// 5. Handle Semester Promotions
 if (isset($_GET['action']) && $_GET['action'] === 'promote_batch') {
     $batch_id = intval($_GET['id']);
     $sql = "UPDATE batches SET current_semester = current_semester + 1 WHERE id = $batch_id AND current_semester < 8";
@@ -98,18 +98,21 @@ $subjects_res = $conn->query("SELECT s.*, c.course_name FROM subjects s JOIN cou
     <title>Academic Configuration - SECMS Admin</title>
     <style>
         :root {
-            --primary: #4f46e5; --primary-dark: #3730a3; --accent: #6366f1; --success: #10b981; --danger: #ef4444;
-            --bg: #f8fafc; --card: #ffffff; --border: #e2e8f0; --text: #0f172a; --text-light: #64748b;
+            --primary: #0f172a; 
+            --accent: #4f46e5;
+            --accent-hover: #4338ca;
+            --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+            --bg: #f8fafc; --card: #ffffff; --border: #e2e8f0; --text: #1e293b; --text-light: #64748b;
         }
         
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; min-height: 100vh; }
         
         /* Sidebar */
-        .sidebar { width: 260px; background: #1e293b; color: white; padding: 25px 20px; box-sizing: border-box; flex-shrink: 0; }
-        .sidebar h3 { margin: 0 0 30px 0; color: #38bdf8; font-size: 20px; }
-        .sidebar a { display: block; color: #cbd5e1; text-decoration: none; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; font-weight: 500; transition: all 0.2s; }
-        .sidebar a:hover, .sidebar a.active { background: #334155; color: white; }
-        .sidebar a.active { background: var(--primary); color: white; }
+        .sidebar { width: 260px; background: var(--primary); color: white; padding: 25px 20px; box-sizing: border-box; flex-shrink: 0; }
+        .sidebar h3 { margin: 0 0 30px 0; color: #818cf8; font-size: 20px; }
+        .sidebar a { display: block; color: #94a3b8; text-decoration: none; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; font-weight: 500; transition: all 0.2s; }
+        .sidebar a:hover { background: #1e293b; color: white; }
+        .sidebar a.active { background: var(--accent); color: white; }
         
         /* Workspace */
         .workspace { flex: 1; display: flex; flex-direction: column; min-width: 0; }
@@ -129,19 +132,18 @@ $subjects_res = $conn->query("SELECT s.*, c.course_name FROM subjects s JOIN cou
         
         label { font-size: 13px; font-weight: 600; color: var(--text-light); display: block; margin-top: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;}
         input, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 14px; font-family: inherit; }
-        input:focus, select:focus { outline: 2px solid var(--primary); border-color: transparent; }
+        input:focus, select:focus { outline: 2px solid var(--accent); border-color: transparent; }
         
-        button { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; padding: 12px; border-radius: 6px; width: 100%; margin-top: 15px; transition: 0.2s; }
-        button:hover { background: var(--primary-dark); }
+        button { background: var(--accent); color: white; border: none; font-weight: 600; cursor: pointer; padding: 12px; border-radius: 6px; width: 100%; margin-top: 15px; transition: 0.2s; }
+        button:hover { background: var(--accent-hover); }
         
         /* Tables */
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px 10px; border-bottom: 1px solid var(--border); text-align: left; font-size: 14px; }
         th { color: var(--text-light); font-weight: 600; background: #f8fafc; }
         
-        .action-link { font-weight: 600; text-decoration: none; font-size: 13px; margin-right: 10px; }
+        .action-link { font-weight: 600; text-decoration: none; font-size: 13px; margin-right: 10px; color: var(--accent); }
         .text-danger { color: var(--danger); }
-        .text-primary { color: var(--primary); }
         
         .success { background: #d1fae5; color: #065f46; padding: 15px; border-radius: 8px; margin-bottom: 25px; font-weight: 500; border: 1px solid #34d399; }
         .error { background: #fee2e2; color: #991b1b; padding: 15px; border-radius: 8px; margin-bottom: 25px; font-weight: 500; border: 1px solid #f87171; }
@@ -163,16 +165,16 @@ $subjects_res = $conn->query("SELECT s.*, c.course_name FROM subjects s JOIN cou
     <header class="top-header">
         <div style="font-size: 15px; font-weight: 500; color: var(--text-light);">System Role: <strong>Administrator</strong></div>
         
-        <!-- Interactive Profile Menu -->
         <div class="profile-menu" style="position: relative; display: inline-block;">
             <div class="profile-trigger" style="display: flex; align-items: center; gap: 10px; background: #f1f5f9; padding: 8px 16px; border-radius: 50px; cursor: pointer; font-weight: 600; font-size: 14px; border: 1px solid var(--border);" onclick="var d = document.getElementById('admin-drop'); d.style.display = d.style.display === 'block' ? 'none' : 'block';">
-                <div style="width: 28px; height: 28px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px;">
+                <div style="width: 28px; height: 28px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px;">
                     <?php echo strtoupper(substr($admin_user, 0, 1)); ?>
                 </div>
                 <?php echo htmlspecialchars($admin_user); ?> ▾
             </div>
             
             <div id="admin-drop" style="display: none; position: absolute; right: 0; top: 48px; background: white; min-width: 180px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 8px; border: 1px solid var(--border); z-index: 50; overflow: hidden;">
+                <a href="admin_profile.php" style="color: var(--text); padding: 12px 16px; text-decoration: none; display: block; font-size: 14px; border-bottom: 1px solid #f1f5f9;">👤 Profile Sheet</a>
                 <a href="profile.php" style="color: var(--text); padding: 12px 16px; text-decoration: none; display: block; font-size: 14px;">⚙️ Account Settings</a>
                 <a href="logout.php" style="color: #ef4444; padding: 12px 16px; text-decoration: none; display: block; font-size: 14px; border-top: 1px solid #f1f5f9;">🚪 Sign Out</a>
             </div>
@@ -186,8 +188,7 @@ $subjects_res = $conn->query("SELECT s.*, c.course_name FROM subjects s JOIN cou
         <?php echo $message; ?>
 
         <div class="grid-2">
-            <!-- Form 1: Add Course -->
-            <div class="card" style="border-top: 4px solid var(--primary);">
+            <div class="card" style="border-top: 4px solid var(--accent);">
                 <div class="card-header">Create New Degree / Course</div>
                 <form action="manage_academic_config.php" method="POST">
                     <label>Course Unique Code</label>
@@ -198,7 +199,6 @@ $subjects_res = $conn->query("SELECT s.*, c.course_name FROM subjects s JOIN cou
                 </form>
             </div>
 
-            <!-- Form 2: Add Batch -->
             <div class="card" style="border-top: 4px solid var(--success);">
                 <div class="card-header">Initialize Graduation Batch</div>
                 <form action="manage_academic_config.php" method="POST">
@@ -214,7 +214,6 @@ $subjects_res = $conn->query("SELECT s.*, c.course_name FROM subjects s JOIN cou
                 </form>
             </div>
 
-            <!-- Form 3: Map Subject -->
             <div class="card col-span-2" style="border-top: 4px solid var(--warning);">
                 <div class="card-header">Map Curricular Subject to Degree Program</div>
                 <form action="manage_academic_config.php" method="POST" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: end;">
@@ -252,7 +251,6 @@ $subjects_res = $conn->query("SELECT s.*, c.course_name FROM subjects s JOIN cou
                 </form>
             </div>
             
-            <!-- Table 1: Courses -->
             <div class="card">
                 <div class="card-header">Registered Degrees & Streams</div>
                 <table>
@@ -279,7 +277,6 @@ $subjects_res = $conn->query("SELECT s.*, c.course_name FROM subjects s JOIN cou
                 </table>
             </div>
 
-            <!-- Table 2: Batches -->
             <div class="card">
                 <div class="card-header">Active Academic Batches</div>
                 <table>
@@ -297,7 +294,7 @@ $subjects_res = $conn->query("SELECT s.*, c.course_name FROM subjects s JOIN cou
                             <td><span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius:4px; font-weight:600; font-size:12px;">Sem <?php echo $b['current_semester']; ?></span></td>
                             <td style="text-align: right;">
                                 <?php if($b['current_semester'] < 8): ?>
-                                    <a href="manage_academic_config.php?action=promote_batch&id=<?php echo $b['id']; ?>" class="action-link text-primary">Promote</a>
+                                    <a href="manage_academic_config.php?action=promote_batch&id=<?php echo $b['id']; ?>" class="action-link">Promote</a>
                                 <?php endif; ?>
                                 <a href="manage_academic_config.php?action=delete_batch&id=<?php echo $b['id']; ?>" class="action-link text-danger" onclick="return confirm('Completely clear this batch?')">Delete</a>
                             </td>
@@ -309,7 +306,6 @@ $subjects_res = $conn->query("SELECT s.*, c.course_name FROM subjects s JOIN cou
                 </table>
             </div>
 
-            <!-- Table 3: Master Subjects (Spans full width) -->
             <div class="card col-span-2">
                 <div class="card-header">Master Subjects Curriculum Map Index</div>
                 <table>

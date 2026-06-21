@@ -90,7 +90,7 @@ if ($role === 'admin') {
     <title>Account Settings - SECMS</title>
     <style>
         :root {
-            --primary: #0f172a;
+            --primary: #0f172a; /* Universal Dark Slate */
             --accent: <?php echo $theme_color; ?>; /* Dynamic based on role */
             --bg: #f8fafc;
             --card: #ffffff;
@@ -105,7 +105,7 @@ if ($role === 'admin') {
         .sidebar { width: 260px; background: var(--primary); color: white; padding: 25px 20px; box-sizing: border-box; flex-shrink: 0; }
         .sidebar h3 { margin: 0 0 30px 0; color: var(--accent); font-size: 20px; }
         .sidebar a { display: block; color: #94a3b8; text-decoration: none; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; font-weight: 500; transition: all 0.2s; }
-        .sidebar a:hover, .sidebar a.active { background: #1e293b; color: white; }
+        .sidebar a:hover { background: #1e293b; color: white; }
         .sidebar a.active { background: var(--accent); color: white; }
         
         /* Workspace */

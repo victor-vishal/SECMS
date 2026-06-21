@@ -12,7 +12,7 @@ $admin_id = $_SESSION['user_id'];
 $query = $conn->query("SELECT * FROM users WHERE id = $admin_id");
 $user_data = $query->fetch_assoc();
 
-$admin_name = $user_data['username'] ?? 'Admin';
+$admin_user = $user_data['username'] ?? 'Admin';
 $email = $user_data['email'] ?? 'N/A';
 ?>
 
@@ -23,17 +23,19 @@ $email = $user_data['email'] ?? 'N/A';
     <title>Admin Profile - SECMS</title>
     <style>
         :root { 
-            --primary: #4f46e5; --accent: #6366f1; --bg: #f8fafc; --card: #ffffff; 
-            --border: #e2e8f0; --text: #0f172a; --text-light: #64748b; 
+            --primary: #0f172a; 
+            --accent: #4f46e5;
+            --accent-hover: #4338ca;
+            --bg: #f8fafc; --card: #ffffff; --border: #e2e8f0; --text: #0f172a; --text-light: #64748b; 
         }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; min-height: 100vh; }
         
         /* Sidebar */
-        .sidebar { width: 260px; background: #1e293b; color: white; padding: 25px 20px; box-sizing: border-box; flex-shrink: 0; }
-        .sidebar h3 { margin: 0 0 30px 0; color: #38bdf8; font-size: 20px; }
+        .sidebar { width: 260px; background: var(--primary); color: white; padding: 25px 20px; box-sizing: border-box; flex-shrink: 0; }
+        .sidebar h3 { margin: 0 0 30px 0; color: #818cf8; font-size: 20px; }
         .sidebar a { display: block; color: #cbd5e1; text-decoration: none; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; font-weight: 500; transition: all 0.2s; }
-        .sidebar a:hover, .sidebar a.active { background: #334155; color: white; }
-        .sidebar a.active { background: var(--primary); color: white; border-left: 4px solid #818cf8; padding-left: 11px; }
+        .sidebar a:hover { background: #1e293b; color: white; }
+        .sidebar a.active { background: var(--accent); color: white; }
         
         /* Workspace */
         .workspace { flex: 1; display: flex; flex-direction: column; min-width: 0; }
@@ -47,7 +49,7 @@ $email = $user_data['email'] ?? 'N/A';
         .meta-val { font-weight: 700; color: var(--text); font-size: 15px; }
         
         .btn-settings { display: inline-block; background: #f1f5f9; color: var(--text); border: 1px solid var(--border); padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; margin-top: 25px; transition: 0.2s; }
-        .btn-settings:hover { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-settings:hover { background: var(--accent); color: white; border-color: var(--accent); }
     </style>
 </head>
 <body>
@@ -68,10 +70,10 @@ $email = $user_data['email'] ?? 'N/A';
         
         <div class="profile-menu" style="position: relative; display: inline-block;">
             <div class="profile-trigger" style="display: flex; align-items: center; gap: 10px; background: #f1f5f9; padding: 8px 16px; border-radius: 50px; cursor: pointer; font-weight: 600; font-size: 14px; border: 1px solid var(--border);" onclick="var d = document.getElementById('admin-drop'); d.style.display = d.style.display === 'block' ? 'none' : 'block';">
-                <div style="width: 28px; height: 28px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px;">
-                    <?php echo strtoupper(substr($admin_name, 0, 1)); ?>
+                <div style="width: 28px; height: 28px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px;">
+                    <?php echo strtoupper(substr($admin_user, 0, 1)); ?>
                 </div>
-                <?php echo htmlspecialchars($admin_name); ?> ▾
+                <?php echo htmlspecialchars($admin_user); ?> ▾
             </div>
             
             <div id="admin-drop" style="display: none; position: absolute; right: 0; top: 48px; background: white; min-width: 180px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 8px; border: 1px solid var(--border); z-index: 50; overflow: hidden;">
@@ -88,10 +90,10 @@ $email = $user_data['email'] ?? 'N/A';
             <a href="profile.php" class="btn-settings">⚙️ Account Settings</a>
         </div>
         
-        <div class="profile-card" style="border-top: 4px solid var(--primary);">
+        <div class="profile-card" style="border-top: 4px solid var(--accent);">
             <div class="meta-row">
                 <div class="meta-label">System Admin Name</div>
-                <div class="meta-val"><?php echo htmlspecialchars($admin_name); ?></div>
+                <div class="meta-val"><?php echo htmlspecialchars($admin_user); ?></div>
             </div>
             <div class="meta-row">
                 <div class="meta-label">Registered Email</div>
@@ -99,7 +101,7 @@ $email = $user_data['email'] ?? 'N/A';
             </div>
             <div class="meta-row">
                 <div class="meta-label">Access Level Clearance</div>
-                <div class="meta-val" style="color: var(--primary); text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px;">Super Administrator</div>
+                <div class="meta-val" style="color: var(--accent); text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px;">Super Administrator</div>
             </div>
         </div>
     </main>
