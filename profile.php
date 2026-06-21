@@ -45,7 +45,7 @@ if (isset($_POST['update_password'])) {
 
 // 3. Dynamic UI Configuration Based on Role
 $theme_color = "#2563eb"; // Default to Student Blue
-$sidebar_title = "SECMS Student";
+$sidebar_title = "SECMS";
 $sidebar_html = "";
 
 if ($role === 'admin') {
@@ -55,6 +55,7 @@ if ($role === 'admin') {
         <a href="admin_dashboard.php">Command Center</a>
         <a href="manage_academic_config.php">Academic Config</a>
         <a href="admin_assign_student.php">Assign Student Profiles</a>
+        <a href="admin_profile.php">Profile Sheet</a>
         <a href="profile.php" class="active">Account Settings</a>
     ';
 } elseif ($role === 'faculty') {
@@ -105,7 +106,7 @@ if ($role === 'admin') {
         .sidebar h3 { margin: 0 0 30px 0; color: var(--accent); font-size: 20px; }
         .sidebar a { display: block; color: #94a3b8; text-decoration: none; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; font-weight: 500; transition: all 0.2s; }
         .sidebar a:hover, .sidebar a.active { background: #1e293b; color: white; }
-        .sidebar a.active { border-left: 4px solid var(--accent); padding-left: 11px; color: white; }
+        .sidebar a.active { background: var(--accent); color: white; }
         
         /* Workspace */
         .workspace { flex: 1; display: flex; flex-direction: column; min-width: 0; }
@@ -142,7 +143,7 @@ if ($role === 'admin') {
 <div class="sidebar">
     <h3><?php echo $sidebar_title; ?></h3>
     <?php echo $sidebar_html; ?>
-    <a href="logout.php" style="color: #f87171; margin-top: 40px; display: block;">Sign Out</a>
+    <a href="logout.php" style="color: #f87171; margin-top: 40px; display: block;">Sign Out System</a>
 </div>
 
 <div class="workspace">

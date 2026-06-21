@@ -11,8 +11,6 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 $message = "";
 $admin_user = $_SESSION['username'];
 
-// --- 1. HANDLE FORM SUBMISSIONS (Preserved from original) ---
-
 // Handle Notice/Announcement Submission
 if (isset($_POST['submit_notice'])) {
     $title = mysqli_real_escape_string($conn, $_POST['notice_title']);
@@ -79,20 +77,15 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
     }
 }
 
-// --- 2. FETCH DASHBOARD DATA ---
-
+// Fetch Dashboard Data
 $count_students = $conn->query("SELECT COUNT(*) as total FROM users WHERE role='student' AND status='approved'")->fetch_assoc()['total'];
 $count_faculty = $conn->query("SELECT COUNT(*) as total FROM users WHERE role='faculty' AND status='approved'")->fetch_assoc()['total'];
 $count_pending = $conn->query("SELECT COUNT(*) as total FROM users WHERE status='pending'")->fetch_assoc()['total'];
 $count_courses = $conn->query("SELECT COUNT(*) as total FROM courses")->fetch_assoc()['total'];
 
-// Fetch Pending Users
 $pending_result = $conn->query("SELECT id, username, email, role FROM users WHERE status='pending' ORDER BY created_at ASC");
-
-// Fetch active students for the fee dropdown
 $students_result = $conn->query("SELECT id, username FROM users WHERE role='student' AND status='approved' ORDER BY username ASC");
 
-// Fetch System Financials
 $finance_data = $conn->query("SELECT SUM(total_amount) as expected, SUM(amount_paid) as collected FROM fees")->fetch_assoc();
 $total_expected = $finance_data['expected'] ?? 0;
 $total_collected = $finance_data['collected'] ?? 0;
@@ -106,17 +99,8 @@ $total_due = $total_expected - $total_collected;
     <title>Admin Dashboard - SECMS</title>
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-dark: #3730a3;
-            --accent: #6366f1;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --bg: #f8fafc;
-            --card: #ffffff;
-            --border: #e2e8f0;
-            --text: #0f172a;
-            --text-light: #64748b;
+            --primary: #4f46e5; --primary-dark: #3730a3; --accent: #6366f1; --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+            --bg: #f8fafc; --card: #ffffff; --border: #e2e8f0; --text: #0f172a; --text-light: #64748b;
         }
         
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; min-height: 100vh; }
@@ -126,6 +110,7 @@ $total_due = $total_expected - $total_collected;
         .sidebar h3 { margin: 0 0 30px 0; color: #38bdf8; font-size: 20px; }
         .sidebar a { display: block; color: #cbd5e1; text-decoration: none; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; font-weight: 500; transition: all 0.2s; }
         .sidebar a:hover, .sidebar a.active { background: #334155; color: white; }
+        .sidebar a.active { background: var(--primary); color: white; }
         
         /* Main Workspace */
         .workspace { flex: 1; display: flex; flex-direction: column; min-width: 0; }
@@ -179,18 +164,28 @@ $total_due = $total_expected - $total_collected;
     <a href="admin_dashboard.php" class="active">Command Center</a>
     <a href="manage_academic_config.php">Academic Config</a>
     <a href="admin_assign_student.php">Assign Student Profiles</a>
-    <a href="profile.php">My Account Profile</a>
+    <a href="admin_profile.php">Profile Sheet</a>
+    <a href="profile.php">Account Settings</a>
     <a href="logout.php" style="color: #f87171; margin-top: 40px; display: block;">Sign Out System</a>
 </div>
 
 <div class="workspace">
     <header class="top-header">
         <div style="font-size: 15px; font-weight: 500; color: #64748b;">System Role: <strong>Administrator</strong></div>
-        <div style="font-weight: 600; display: flex; align-items: center; gap: 10px;">
-            <div style="width: 30px; height: 30px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <?php echo strtoupper(substr($admin_user, 0, 1)); ?>
+        
+        <div class="profile-menu" style="position: relative; display: inline-block;">
+            <div class="profile-trigger" style="display: flex; align-items: center; gap: 10px; background: #f1f5f9; padding: 8px 16px; border-radius: 50px; cursor: pointer; font-weight: 600; font-size: 14px; border: 1px solid var(--border);" onclick="var d = document.getElementById('admin-drop'); d.style.display = d.style.display === 'block' ? 'none' : 'block';">
+                <div style="width: 28px; height: 28px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px;">
+                    <?php echo strtoupper(substr($admin_user, 0, 1)); ?>
+                </div>
+                <?php echo htmlspecialchars($admin_user); ?> ▾
             </div>
-            <?php echo htmlspecialchars($admin_user); ?>
+            
+            <div id="admin-drop" style="display: none; position: absolute; right: 0; top: 48px; background: white; min-width: 180px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 8px; border: 1px solid var(--border); z-index: 50; overflow: hidden;">
+                <a href="admin_profile.php" style="color: var(--text); padding: 12px 16px; text-decoration: none; display: block; font-size: 14px; border-bottom: 1px solid #f1f5f9;">👤 Profile Sheet</a>
+                <a href="profile.php" style="color: var(--text); padding: 12px 16px; text-decoration: none; display: block; font-size: 14px;">⚙️ Account Settings</a>
+                <a href="logout.php" style="color: #ef4444; padding: 12px 16px; text-decoration: none; display: block; font-size: 14px; border-top: 1px solid #f1f5f9;">🚪 Sign Out</a>
+            </div>
         </div>
     </header>
 
