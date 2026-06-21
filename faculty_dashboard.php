@@ -10,6 +10,10 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'faculty') {
 
 $message = "";
 
+// Fetch Latest Campus Announcements for Faculty View
+$notices_sql = "SELECT title, message, created_by, created_at FROM announcements ORDER BY created_at DESC LIMIT 5";
+$notices_result = $conn->query($notices_sql);
+
 // 1. Handle Attendance Submission
 if (isset($_POST['submit_attendance'])) {
     $student_id = intval($_POST['student_id']);
@@ -83,6 +87,21 @@ if ($students_result->num_rows > 0) {
             <a href="profile.php" style="color: white; text-decoration: none; margin-right: 15px; background: #007BFF; padding: 5px 10px; border-radius: 4px;">My Profile</a>
             <a href="logout.php">Logout</a>
         </div>
+    </div>
+
+    <h2>Latest Campus Bulletins</h2>
+    <div style="margin-bottom: 30px;">
+        <?php if ($notices_result && $notices_result->num_rows > 0): ?>
+            <?php while($notice = $notices_result->fetch_assoc()): ?>
+                <div style="background: #fff8e1; border-left: 5px solid #ffb300; padding: 15px; border-radius: 6px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <h4 style="margin: 0 0 5px 0; color: #b78103; font-size: 16px;"><?php echo htmlspecialchars($notice['title']); ?></h4>
+                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #4b5563; line-height: 1.5;"><?php echo nl2br(htmlspecialchars($notice['message'])); ?></p>
+                    <small style="color: #9ca3af; font-size: 12px;">Posted by: <strong><?php echo htmlspecialchars($notice['created_by']); ?></strong> on <?php echo date('M d, Y h:i A', strtotime($notice['created_at'])); ?></small>
+                </div>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <div style="background: #f1f5f9; padding: 15px; border-radius: 6px; color: #64748b; text-align: center; font-size: 14px;">No campus announcements posted at this time.</div>
+        <?php endif; ?>
     </div>
 
     <h2>Faculty Management Console</h2>

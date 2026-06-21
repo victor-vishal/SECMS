@@ -2,6 +2,7 @@
 include 'db_connect.php';
 session_start();
 
+
 // Security Check: Make sure only logged-in Students can access this page
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'student') {
     header("Location: login.php");
@@ -33,6 +34,15 @@ $att_det_result = $conn->query($att_det_sql);
 $fees_sql = "SELECT total_amount, amount_paid, status FROM fees WHERE student_id = $student_id";
 $fees_result = $conn->query($fees_sql);
 $fee_data = $fees_result->fetch_assoc();
+
+// 4. Fetch Complete Class Schedule Timetable
+$timetable_sql = "SELECT day_of_week, time_slot, subject_name, room_number FROM timetables ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'), time_slot ASC";
+$timetable_result = $conn->query($timetable_sql);
+
+// 5. Fetch Latest Campus Announcements
+$notices_sql = "SELECT title, message, created_by, created_at FROM announcements ORDER BY created_at DESC LIMIT 5";
+$notices_result = $conn->query($notices_sql);
+
 ?>
 
 <!DOCTYPE html>
@@ -67,6 +77,21 @@ $fee_data = $fees_result->fetch_assoc();
             <a href="profile.php" style="color: white; text-decoration: none; margin-right: 15px; background: #007BFF; padding: 5px 10px; border-radius: 4px;">My Profile</a>
             <a href="logout.php">Logout</a>
         </div>
+    </div>
+
+    <h2>Latest Campus Bulletins</h2>
+    <div style="margin-bottom: 30px;">
+        <?php if ($notices_result && $notices_result->num_rows > 0): ?>
+            <?php while($notice = $notices_result->fetch_assoc()): ?>
+                <div style="background: #fff8e1; border-left: 5px solid #ffb300; padding: 15px; border-radius: 6px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <h4 style="margin: 0 0 5px 0; color: #b78103; font-size: 16px;"><?php echo htmlspecialchars($notice['title']); ?></h4>
+                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #4b5563; line-height: 1.5;"><?php echo nl2br(htmlspecialchars($notice['message'])); ?></p>
+                    <small style="color: #9ca3af; font-size: 12px;">Posted by: <strong><?php echo htmlspecialchars($notice['created_by']); ?></strong> on <?php echo date('M d, Y h:i A', strtotime($notice['created_at'])); ?></small>
+                </div>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <div style="background: #f1f5f9; padding: 15px; border-radius: 6px; color: #64748b; text-align: center; font-size: 14px;"> No campus announcements posted at this time.</div>
+        <?php endif; ?>
     </div>
 
     <div class="grid-container">
@@ -117,6 +142,34 @@ $fee_data = $fees_result->fetch_assoc();
             <?php else: ?>
                 <tr>
                     <td colspan="4" class="no-data">No academic grades found.</td>
+                </tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
+
+    <h2>Weekly Class Schedule</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Day</th>
+                <th>Time Window</th>
+                <th>Subject Name</th>
+                <th>Room / Lab Location</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if ($timetable_result && $timetable_result->num_rows > 0): ?>
+                <?php while($time_row = $timetable_result->fetch_assoc()): ?>
+                    <tr>
+                        <td><strong><?php echo $time_row['day_of_week']; ?></strong></td>
+                        <td><?php echo $time_row['time_slot']; ?></td>
+                        <td><?php echo htmlspecialchars($time_row['subject_name']); ?></td>
+                        <td><span style="background: #e2e8f0; padding: 3px 8px; border-radius: 4px; font-size: 13px; font-weight:600;"><?php echo htmlspecialchars($time_row['room_number']); ?></span></td>
+                    </tr>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <tr>
+                    <td colspan="4" class="no-data" style="text-align:center; padding:20px; color:#94a3b8;">No class schedule slots have been published yet.</td>
                 </tr>
             <?php endif; ?>
         </tbody>
