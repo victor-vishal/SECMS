@@ -158,7 +158,7 @@ $subjects_res = $conn->query("SELECT s.*, c.course_name FROM subjects s JOIN cou
     <a href="admin_assign_student.php">Assign Student Profiles</a>
     <a href="admin_profile.php">Profile Sheet</a>
     <a href="profile.php">Account Settings</a>
-    <a href="logout.php" style="color: #f87171; margin-top: 40px; display: block;">Sign Out System</a>
+    <a href="logout.php" style="color: #f87171; margin-top: 40px; display: block;">Sign Out</a>
 </div>
 
 <div class="workspace">

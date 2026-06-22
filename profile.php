@@ -143,7 +143,7 @@ if ($role === 'admin') {
 <div class="sidebar">
     <h3><?php echo $sidebar_title; ?></h3>
     <?php echo $sidebar_html; ?>
-    <a href="logout.php" style="color: #f87171; margin-top: 40px; display: block;">Sign Out System</a>
+    <a href="logout.php" style="color: #f87171; margin-top: 40px; display: block;">Sign Out</a>
 </div>
 
 <div class="workspace">
